@@ -1,22 +1,35 @@
 #include <stdio.h>
 #include <string.h>
-#include "../src/json.h"
+#include "json.h"
 
 int
 main(void)
 {
-    JsonValue *root = JsonValue_parseFile("example.json");
-    JsonObject *rootObject = JsonValue_getObject(root);
-    JsonValue *resultValue = GetVal(rootObject, "result");
-    JsonObject *resultObject = JsonValue_getObject(resultValue);
-    JsonValue *listValue = GetVal(resultObject, "list");
-    JsonArray *list = JsonValue_getArray(listValue);
+    Json *json;
+    JsonArray *list;
+    JsonObject *result;
+
+    json = Json_parseFile("test_1.json");
+    result = Json_getObject(json, "result");
+    list = JsonObject_getArray(result, "list");
+
+    printf("name = %s\n", JsonObject_getString(result, "name"));
+
     int index;
     for (index = 0; index < list->items->size; index++) {
-        JsonValue *value = GetArrayVal(list, index);
-        JsonString *string = JsonValue_getString(value);
-        printf("%s\n", string->value);
+        printf("%s\n", JsonArray_getString(list, index));
     }
-    JsonValue_destroy(root);
+
+    Json_destroy(json);
+
+    json = Json_parseFile("test_2.json");
+    list = Json_getArray(json);
+
+    for (index = 0; index < list->items->size; index++) {
+        printf("%s\n", JsonArray_getString(list, index));
+    }
+
+    Json_destroy(json);
+
     return 0;
 }

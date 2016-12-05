@@ -59,9 +59,16 @@ typedef struct JsonValue {
     Parser *parser;    
 } JsonValue;
 
+typedef struct Json {
+	Parser *parser;
+	JsonValue *value;
+} Json;
 
 Parser *
 Parser_create(Vector *tokens);
+
+void
+Parser_destroy(Parser *parser);
 
 Token *
 GetToken(Parser *parser, int offset);
@@ -173,5 +180,32 @@ ReadFile(char *path);
 JsonValue *
 JsonValue_parseFile(char *file);
 
+Json *
+Json_parseFile(char *file);
+
 void
 JsonValue_destroy(JsonValue *value);
+
+JsonObject *
+Json_getObject(Json *json, char *name);
+
+JsonArray *
+Json_getArray(Json *json);
+
+char *
+JsonObject_getString(JsonObject *obj, char *key);
+
+JsonArray *
+JsonObject_getArray(JsonObject *obj, char *key);
+
+char *
+JsonArray_getString(JsonArray *array, int index);
+
+int
+JsonArray_getNumber(JsonArray *array, int index);
+
+JsonObject *
+JsonArray_getJsonObject(JsonArray *array, int index);
+
+void
+Json_destroy(Json *json);

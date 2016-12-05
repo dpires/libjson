@@ -43,6 +43,19 @@ Parser_create(Vector *tokens)
     return p;
 } 
 
+void
+Parser_destroy(Parser *parser)
+{
+    VIterator *it = Vector_getIterator(parser->tokens);
+    Token *token;
+    while ((token = VIterator_getNext(it)) != NULL) {
+        Token_destroy(token);
+    }
+    VIterator_destroy(it);
+    Vector_destroy(parser->tokens);
+    free(parser);
+}
+
 Token *
 GetToken(Parser *parser, int offset)
 {
@@ -92,7 +105,6 @@ AddItem(JsonArray *array, JsonValue *val)
     Vector_add(array->items, val);
 }
 
-
 JsonValue *
 JsonValue_create(int type)
 {
@@ -130,16 +142,20 @@ GetArrayVal(JsonArray *a, int index)
 JsonValue *
 GetVal(JsonObject *val, char *key)
 {
+	JsonValue *ret = NULL;
     VIterator *it = Vector_getIterator(val->names);
     char *n;
     int index = 0;
     while((n = VIterator_getNext(it)) != NULL) {
-        if (strcmp(key, n) ==0)
-            return Vector_get(val->values, index);
+        if (strcmp(key, n) ==0) {
+            ret = Vector_get(val->values, index);
+		break;
+	}
 
         index++;
     }
-    return NULL;
+	VIterator_destroy(it);
+    return ret;
 
 }
 
@@ -508,7 +524,7 @@ ReadFile(char *path)
 JsonValue *
 JsonValue_parseFile(char *file)
 {
-    char *input = ReadFile(file); 
+    char *input = ReadFile(file);
     Vector *tokens = Tokenize(input);
     free(input);
     Parser *p = Parser_create(tokens);
@@ -516,7 +532,116 @@ JsonValue_parseFile(char *file)
 }
 
 void
+JsonArray_destroy(JsonArray *array)
+{
+    VIterator *it = Vector_getIterator(array->items);
+    JsonValue *val;
+    while ((val = VIterator_getNext(it)) != NULL) {
+        JsonValue_destroy(val);
+    }
+    VIterator_destroy(it);
+    Vector_destroy(array->items);
+    free(array);
+}
+
+void
+JsonObject_destroy(JsonObject *object)
+{
+    Vector_destroy(object->names);
+    VIterator *it = Vector_getIterator(object->values);
+    JsonValue *val;
+    while ((val = VIterator_getNext(it)) != NULL) {
+        JsonValue_destroy(val);
+    }
+    VIterator_destroy(it);
+    Vector_destroy(object->values);
+    free(object);
+}
+
+void
 JsonValue_destroy(JsonValue *value)
 {
+    switch(value->type) {
+        case J_OBJECT:
+            JsonObject_destroy(value->jsonObject);
+            break;
+
+        case J_ARRAY:
+            JsonArray_destroy(value->jsonArray);
+            break;
+
+        case J_STRING:
+            free(value->jsonString);
+            break;
+
+        case J_NUMBER:
+            free(value->jsonNumber);
+            break;
+    }
+
     free(value);
+}
+
+Json *
+Json_parseFile(char *file)
+{
+    char *input = ReadFile(file);
+    Vector *tokens = Tokenize(input);
+    free(input);
+    Json *json = (Json *)malloc(sizeof(Json));
+    json->parser = Parser_create(tokens);
+    json->value = ParseValue(json->parser);
+    return json;
+}
+
+void
+Json_destroy(Json *json)
+{
+    JsonValue_destroy(json->value);
+    Parser_destroy(json->parser);
+    free(json);
+}
+
+JsonObject *
+Json_getObject(Json *json, char *name)
+{
+    return GetVal(json->value->jsonObject, name)->jsonObject;
+}
+
+JsonArray *
+Json_getArray(Json *json)
+{
+    return json->value->jsonArray;
+}
+
+char *
+JsonObject_getString(JsonObject *obj, char *key)
+{
+    return GetVal(obj, key)->jsonString->value;
+}
+
+JsonArray *
+JsonObject_getArray(JsonObject *obj, char *key)
+{
+    return GetVal(obj, key)->jsonArray;
+}
+
+char *
+JsonArray_getString(JsonArray *array, int index)
+{
+    return GetArrayVal(array, index)->jsonString->value;
+}
+
+int
+JsonArray_getNumber(JsonArray *array, int index)
+{
+    JsonValue *val = GetArrayVal(array, index);
+    JsonNumber *number = val->jsonNumber;
+    return *number->value;
+}
+
+JsonObject *
+JsonArray_getJsonObject(JsonArray *array, int index)
+{
+    return GetArrayVal(array, index)->jsonObject;
 }
